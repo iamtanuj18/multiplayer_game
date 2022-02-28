@@ -1,0 +1,6 @@
+fragment RegularLobby on Lobby {
+  id
+  roomId
+  userId
+  username
+}

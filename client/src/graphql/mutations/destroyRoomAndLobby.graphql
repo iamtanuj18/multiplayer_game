@@ -1,0 +1,3 @@
+mutation DestroyRoomAndLobby($roomCode: String!) {
+  destroyRoomAndLobby(roomCode: $roomCode)
+}

@@ -1,0 +1,5 @@
+mutation JoinRoom($userId: String!, $username: String!, $roomCode: String!) {
+  joinRoom(userId: $userId, username: $username, roomCode: $roomCode) {
+    ...RegularUserRoomResponse
+  }
+}

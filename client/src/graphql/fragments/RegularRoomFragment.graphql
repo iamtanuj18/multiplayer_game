@@ -1,0 +1,6 @@
+fragment RegularRoom on Room {
+  id
+  users
+  inGame
+  adminSocketId
+}

@@ -1,0 +1,60 @@
+.turn-display {
+  width: 50%;
+  text-align: center;
+  background-color: white;
+  font-size: 2em;
+  line-height: 2em;
+  font-weight: bold;
+  border-top: 4px solid #b88b4a;
+  border-bottom: 4px solid #e3c16f;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  height: 2em;
+  font-family: "Archivo Black", sans-serif;
+}
+
+.animation-turn {
+  display: flex;
+  flex-direction: column;
+}
+
+.whose-turn-enter {
+  position: relative;
+  top: 0px;
+}
+
+.whose-turn-enter.whose-turn-enter-active {
+  animation-name: appearFromBottom;
+  animation-duration: 0.8s;
+  animation-timing-function: ease-in;
+}
+
+.whose-turn-exit {
+  position: relative;
+  top: -140px;
+}
+
+.whose-turn-exit.whose-turn-exit-active {
+  animation-name: fadeToTop;
+  animation-duration: 0.8s;
+  animation-timing-function: ease-in;
+}
+
+@keyframes fadeToTop {
+  from {
+    top: -65px;
+  }
+  to {
+    top: -140px;
+  }
+}
+
+@keyframes appearFromBottom {
+  from {
+    top: 60px;
+  }
+  to {
+    top: 0px;
+  }
+}
