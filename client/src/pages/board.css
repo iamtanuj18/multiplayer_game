@@ -1,0 +1,13 @@
+.game-screen {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.chessBoard {
+  width: 100vh;
+}
+
+.videoArea {
+  width: 50vh;
+}

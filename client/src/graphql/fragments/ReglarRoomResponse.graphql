@@ -1,0 +1,5 @@
+fragment RegularRoomResponse on RoomResponse {
+  response {
+    ...RegularFieldResponse
+  }
+}

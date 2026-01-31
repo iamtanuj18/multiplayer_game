@@ -1,0 +1,53 @@
+# Root-level .gitignore for Multiplayer Chess Game
+
+# Project Planning & Documentation 
+project plan/
+Figma/
+
+# IDE - Root level
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS - Root level
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Dependencies - Root level (in case someone runs npm install at root)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables - Root level
+.env
+.env.local
+.env.*.local
+
+# Logs - Root level
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Build outputs - Root level
+dist/
+build/
+
+# Git specific
+*.orig
+*.rej
