@@ -13,7 +13,8 @@ interface TileProps {
 
 function Tile(props: TileProps) {
     const handleClick = () => {
-        if (props.isValid) {
+        // Allow clicking if it's a valid move OR if there's a piece here (to select/switch pieces)
+        if (props.isValid || props.children) {
             props.handleClick(props.position, props.children as JSX.Element | null)
         }
     };

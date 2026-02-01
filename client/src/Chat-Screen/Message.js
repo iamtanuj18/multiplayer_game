@@ -7,7 +7,7 @@ export default function Message({ message: { user, text }, name }) {
 
   return sentByUser ? (
     <div className="messageContainer justifyEnd">
-      <p className="sentText pr-10">{name}</p>
+      <p className="sentText pr-10">You</p>
       <div className="messageBox backgroundBlue">
         <p className="messageText colorWhite">{text}</p>
       </div>

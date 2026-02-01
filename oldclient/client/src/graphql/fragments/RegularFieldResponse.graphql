@@ -1,0 +1,4 @@
+fragment RegularFieldResponse on FieldResponse {
+  values
+  code
+}

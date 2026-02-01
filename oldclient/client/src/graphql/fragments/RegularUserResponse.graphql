@@ -1,0 +1,4 @@
+fragment RegularUserResponse on UserResponse {
+  values
+  error
+}

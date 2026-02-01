@@ -1,0 +1,49 @@
+.player-label {
+  width: 100%;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.player-label.top {
+  margin-bottom: 8px;
+}
+
+.player-label.bottom {
+  margin-top: 8px;
+}
+
+.player-name {
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.player-role {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.player-label.your-side {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%);
+  border: 2px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+}
+
+.player-label.opponent-side {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
+  border: 2px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+}
+
+.player-label.your-side .player-name {
+  color: #16a34a;
+}
+
+.player-label.opponent-side .player-name {
+  color: #dc2626;
+}

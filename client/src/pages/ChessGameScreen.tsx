@@ -20,9 +20,20 @@ export const ChessGameScreen: React.FC<ChessGameScreenProps> = ({
 }) => {
   const { roomId } = useParams<GameScreenRoomIdProps>();
   const location =
-    useLocation<{ username: "value"; playerVal: "value"; users: "value" }>();
+    useLocation<{ username: string; playerVal: string; users: any }>();
   const [errorMessage, setErrorMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
+
+  const parsedUsers = Array.isArray(location.state.users)
+    ? location.state.users
+    : JSON.parse(location.state.users);
+
+  const opponentUser = parsedUsers.find(
+    (user: { username: string }) => user.username !== location.state.username
+  );
+
+  const playerColor = location.state.playerVal === "1" ? "White" : "Black";
+  const opponentColor = playerColor === "White" ? "Black" : "White";
 
   const [destroyRoomAndLobby] = useDestroyRoomAndLobbyMutation();
   useEffect(() => {
@@ -65,24 +76,70 @@ export const ChessGameScreen: React.FC<ChessGameScreenProps> = ({
         </Modal.Dialog>
       </Modal>
 
-      <div className="game-screen">
-        <div className="chessBoard">
-          <App
-            playerVal={location.state.playerVal}
-            username={location.state.username}
-            roomId={roomId}
-            users={Array.isArray(location.state.users) ? location.state.users : JSON.parse(location.state.users)}
-          />
-        </div>
-        <div className="videoArea">
-          <VideoCall
-            roomId={roomId}
-            allUsers={location.state.users}
-            username={location.state.username}
-          />
-        </div>
-        <div>
-          <Chat username={location.state.username} roomId={roomId} />
+      <div className="game-page">
+        <div className="game-layout">
+          <aside className="game-left">
+            <div className="panel-card">
+              <div className="panel-header">
+                <h3>Players</h3>
+                <p>Camera views</p>
+              </div>
+              <VideoCall
+                roomId={roomId}
+                allUsers={parsedUsers}
+                username={location.state.username}
+              />
+            </div>
+
+            <div className="panel-card game-info-card">
+              <div className="panel-header">
+                <h3>Game Info</h3>
+                <p>Room and player details</p>
+              </div>
+              <div className="game-info-row">
+                <span>Room Code</span>
+                <code>{roomId}</code>
+              </div>
+              <div className="game-info-row">
+                <span>Your Color</span>
+                <span className="game-info-value">{playerColor}</span>
+              </div>
+              <div className="game-info-row">
+                <span>Opponent</span>
+                <span className="game-info-value">
+                  {opponentUser?.username || "Waiting"}
+                </span>
+              </div>
+            </div>
+          </aside>
+
+          <main className="game-center">
+            <div className="board-wrap">
+              <App
+                playerVal={location.state.playerVal}
+                username={location.state.username}
+                roomId={roomId}
+                users={parsedUsers}
+              />
+            </div>
+          </main>
+
+          <aside className="game-right">
+            <div className="chat-card">
+              <div className="chat-header">
+                <div>
+                  <h3>Game Chat</h3>
+                  <p>Talk with your opponent</p>
+                </div>
+                <Button variant="outline-dark" onClick={sendToHomePage}>
+                  Leave Game
+                </Button>
+              </div>
+              <div className="chat-body">
+                <Chat username={location.state.username} roomId={roomId} />
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </>

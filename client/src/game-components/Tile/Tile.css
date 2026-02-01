@@ -16,17 +16,17 @@
 .valid > .circle {
     height: 1rem;
     width: 1rem;
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(0, 0, 0, 0.4);
     border-radius: 50%;
     display: inline-block;
 }
 
 .black {
-    background-color: #b88b4a;
+    background-color: #d97706;
 }
 
 .white {
-    background-color: #e3c16f;
+    background-color: #fef3c7;
 }
 
 .selected {

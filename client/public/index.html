@@ -14,6 +14,19 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>Multiplayer Chess Game - Play Online with Friends</title>
+    <script>
+      // Polyfill for process required by simple-peer in browser
+      window.process = window.process || {
+        env: {},
+        nextTick: function(callback) {
+          setTimeout(callback, 0);
+        }
+      };
+      window.global = window;
+      window.Buffer = window.Buffer || {
+        isBuffer: function() { return false; }
+      };
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
