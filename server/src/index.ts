@@ -16,7 +16,16 @@ import { Socket } from "socket.io";
 interface ExtSocket extends Socket {
   username: string;
   roomCode: string;
+  userId: string;
 }
+
+process.on("unhandledRejection", (reason) => {
+  console.error(" Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error(" Uncaught Exception:", err);
+});
 
 const main = async () => {
   dotenv.config();
@@ -25,7 +34,7 @@ const main = async () => {
     type: "postgres",
     url: process.env.DATABASE_URL,
     logging: true,
-    synchronize: false,
+    synchronize: process.env.NODE_ENV === "development", // Auto-create tables in dev
     entities: [User, Lobby, Room],
     extra: {
       ssl: {
@@ -44,13 +53,25 @@ const main = async () => {
     contentSecurityPolicy: process.env.NODE_ENV === "production",
   }));
 
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
+    : ["http://localhost:3000"];
+
+  app.use(
+    cors({
+      origin: allowedOrigins,
+      credentials: true,
+    })
+  );
+
   // Rate limiting
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: process.env.NODE_ENV === "production" ? 100 : 2000,
     message: "Too many requests from this IP, please try again later.",
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => req.method === "OPTIONS",
   });
 
   // Apply rate limiting to GraphQL endpoint
@@ -68,7 +89,7 @@ const main = async () => {
   }
 
   // Health check endpoint for AWS load balancer
-  app.get("/health", (req, res) => {
+  app.get("/health", (_req, res) => {
     res.status(200).json({
       status: "healthy",
       timestamp: new Date().toISOString(),
@@ -79,16 +100,7 @@ const main = async () => {
 
   const schema = await createBuildSchema();
 
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
-    : ["http://localhost:3000"];
-
-  app.use(
-    cors({
-      origin: allowedOrigins,
-      credentials: true,
-    })
-  );
+  // CORS already applied above before rate limiting
 
   const apolloServer = new ApolloServer({
     schema,
@@ -113,6 +125,7 @@ const main = async () => {
     socket.on("init", function (data) {
       socket.username = data.username;
       socket.roomCode = data.roomCode;
+      socket.userId = data.userId;
     });
 
     socket.on("joinRoom", function (data) {
@@ -124,13 +137,39 @@ const main = async () => {
       });
     });
 
-    socket.on("leaveRoom", function (data) {
-      socket.leave(data.roomId);
-      socket.broadcast.to(data.roomId).emit("someone-leaved", {
-        id: socket.id,
-        username: socket.username,
-        users: data.users,
-      });
+    socket.on("leaveRoom", async function (data) {
+      try {
+        socket.leave(data.roomId);
+
+        const room = await Room.findOne({ where: { id: data.roomId } });
+        if (!room) {
+          return;
+        }
+
+        // Host leaves via explicit leave
+        if (room.adminSocketId === (data.userId || socket.userId || socket.id)) {
+          await Lobby.delete({ roomId: data.roomId });
+          await Room.delete({ id: data.roomId });
+
+          socket.broadcast.to(data.roomId).emit("throw-room-recieved", {
+            value: "THROW",
+          });
+          return;
+        }
+
+        // Non-host leaves: remove from lobby and update count
+        await Lobby.delete({ roomId: data.roomId, userId: data.userId || socket.userId || socket.id });
+        const remainingUsers = await Lobby.count({ where: { roomId: data.roomId } });
+        await Room.update({ id: data.roomId }, { users: remainingUsers });
+        
+        // Broadcast to others that someone left
+        socket.broadcast.to(data.roomId).emit("someone-leaved", {
+          id: data.userId || socket.id,
+          username: socket.username,
+        });
+      } catch (err) {
+        console.error("❌ leaveRoom socket error:", err);
+      }
     });
 
     socket.on("throw-all-users-out-of-room", function (data) {
@@ -167,8 +206,47 @@ const main = async () => {
     });
 
     //Disconnect Event
-    socket.on("disconnect", () => {
-      socket.broadcast.to(socket.roomCode).emit("opponent-left");
+    socket.on("disconnect", async () => {
+      try {
+        // Only notify about disconnect if user was in a room
+        if (socket.roomCode) {
+          // Check if room exists and is in game
+          const room = await Room.findOne({ where: { id: socket.roomCode } });
+
+          if (!room) {
+            return;
+          }
+
+          // Host disconnected: destroy room + lobby and notify others
+          if (room.adminSocketId === (socket.userId || socket.id)) {
+            await Lobby.delete({ roomId: socket.roomCode });
+            await Room.delete({ id: socket.roomCode });
+
+            socket.broadcast.to(socket.roomCode).emit("throw-room-recieved", {
+              value: "THROW",
+            });
+            return;
+          }
+
+          // Non-host disconnects: remove from lobby and decrement count
+          await Lobby.delete({ roomId: socket.roomCode, userId: socket.userId || socket.id });
+          const remainingUsers = await Lobby.count({ where: { roomId: socket.roomCode } });
+          await Room.update({ id: socket.roomCode }, { users: remainingUsers });
+
+          // Only emit opponent-left if game is in progress, not in lobby
+          if (room.inGame) {
+            socket.broadcast.to(socket.roomCode).emit("opponent-left");
+          } else {
+            // In lobby - emit someone-leaved instead
+            socket.broadcast.to(socket.roomCode).emit("someone-leaved", {
+              id: socket.id,
+              username: socket.username,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("❌ disconnect handler error:", err);
+      }
     });
   });
 

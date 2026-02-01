@@ -7,6 +7,7 @@ import {
 } from "../constants";
 import { Lobby } from "../entity/Lobby";
 import { Room } from "../entity/Room";
+import { ILike } from "typeorm";
 import {
   Arg,
   Field,
@@ -76,7 +77,7 @@ export class RoomResolver {
 
     let newRoom = await Room.create({
       id: ans,
-      users: 1,
+      users: 1, // Start with 1 user (the host)
       adminSocketId: adminId,
     }).save();
 
@@ -100,6 +101,7 @@ export class RoomResolver {
     @Arg("username") username: string,
     @Arg("roomCode") roomCode: string
   ): Promise<RoomUserResponse> {
+    const normalizedUsername = username.trim();
     let room = (await Room.findOne({ where: { id: roomCode } })) as Room;
 
     if (!room) {
@@ -107,15 +109,6 @@ export class RoomResolver {
         response: {
           values: false,
           error: ROOM_DOES_NOT_EXIST,
-        },
-      };
-    }
-
-    if (room.users === 0) {
-      return {
-        response: {
-          values: false,
-          error: ROOM_IS_FULL,
         },
       };
     }
@@ -129,25 +122,72 @@ export class RoomResolver {
       };
     }
 
-    let lobby = (await Lobby.find({ where: { roomId: roomCode } })) as Lobby[];
+    // Handle existing userId entry (reconnect or stale)
+    const existingByUserId = await Lobby.findOne({
+      where: { roomId: roomCode, userId: userId },
+    });
 
-    for (let i = 0; i < lobby.length; i++) {
-      if (lobby[i].username === username) {
+    if (existingByUserId) {
+      if (existingByUserId.username === normalizedUsername) {
+        const currentCount = await Lobby.count({ where: { roomId: roomCode } });
+        await Room.update({ id: roomCode }, { users: currentCount });
         return {
           response: {
-            values: false,
-            error: USERNAME_EXIST_IN_ROOM,
+            values: true,
+            error: NONE,
           },
         };
       }
+
+      // Remove stale entry for same userId
+      await Lobby.delete({ id: existingByUserId.id });
+    }
+
+    // Handle existing username entry (prevent duplicates)
+    const existingByUsername = await Lobby.findOne({
+      where: { roomId: roomCode, username: ILike(normalizedUsername) },
+    });
+
+    if (existingByUsername) {
+      if (existingByUsername.userId === userId) {
+        const currentCount = await Lobby.count({ where: { roomId: roomCode } });
+        await Room.update({ id: roomCode }, { users: currentCount });
+        return {
+          response: {
+            values: true,
+            error: NONE,
+          },
+        };
+      }
+
+      return {
+        response: {
+          values: false,
+          error: USERNAME_EXIST_IN_ROOM,
+        },
+      };
+    }
+
+    const currentCount = await Lobby.count({ where: { roomId: roomCode } });
+
+    // Check if room is full (max 2 players) using lobby count
+    if (currentCount >= 2) {
+      return {
+        response: {
+          values: false,
+          error: ROOM_IS_FULL,
+        },
+      };
     }
 
     await Lobby.create({
       roomId: roomCode,
       userId: userId,
-      username: username,
+      username: normalizedUsername,
     }).save();
-    await Room.update({ id: roomCode }, { users: room.users - 1 });
+
+    // Keep user count consistent with lobby
+    await Room.update({ id: roomCode }, { users: currentCount + 1 });
     return {
       response: {
         values: true,
@@ -165,6 +205,7 @@ export class RoomResolver {
 
     if (!room) return false;
 
+    // If admin/host leaves, delete everything
     if (room.adminSocketId === id) {
       await Room.delete({ id: roomCode });
       await Lobby.delete({ roomId: roomCode });
@@ -172,7 +213,12 @@ export class RoomResolver {
       return true;
     }
 
-    await Lobby.delete({ userId: id });
+    // Regular player leaves - remove from lobby and decrement count
+    await Lobby.delete({ roomId: roomCode, userId: id });
+
+    // Keep user count consistent with lobby
+    const remainingUsers = await Lobby.count({ where: { roomId: roomCode } });
+    await Room.update({ id: roomCode }, { users: remainingUsers });
 
     return true;
   }
@@ -214,7 +260,8 @@ export class RoomResolver {
   ): Promise<number> {
     const room = (await Room.findOne({ where: { id: roomCode } })) as Room;
 
-    return 5 - room.users;
+    // Return actual number of users in the room
+    return room.users;
   }
 
   @Query(() => [Lobby])

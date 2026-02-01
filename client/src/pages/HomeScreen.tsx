@@ -16,9 +16,19 @@ import "./HomeScreen.css";
 interface HomeScreenProps extends RouteComponentProps {}
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ history }) => {
+  const generateClientId = () => {
+    return `cid_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  };
+
+  const storedClientId = localStorage.getItem("chess_client_id") || generateClientId();
+  if (!localStorage.getItem("chess_client_id")) {
+    localStorage.setItem("chess_client_id", storedClientId);
+  }
+
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
   const [socketId, setSocketId] = useState("");
+  const [socketReady, setSocketReady] = useState(false);
   
   // Modal-specific error states
   const [createRoomUsernameError, setCreateRoomUsernameError] = useState("");
@@ -30,9 +40,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ history }) => {
   const [openJoinRoomModal, setOpenJoinRoom] = useState(false);
   const [createRoomMutation] = useCreateRoomMutation();
   const [joinRoomMutation] = useJoinRoomMutation();
-  socket.on("setId", function (data) {
-    setSocketId(data.id);
-  });
+  
+  // Initialize socket ID on mount
+  React.useEffect(() => {
+    const handleSetId = (data: { id: string }) => {
+      setSocketId(data.id);
+      setSocketReady(true);
+    };
+    
+    // Ensure socket is connected
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      // If already connected, get the ID immediately
+      setSocketId(socket.id || "");
+      setSocketReady(!!socket.id);
+    }
+    
+    socket.on("setId", handleSetId);
+    
+    return () => {
+      socket.off("setId", handleSetId);
+    };
+  }, []);
 
   const changeCreateRoomStatus = () => {
     setCreateRoomUsernameError("");
@@ -66,23 +96,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ history }) => {
       return;
     }
 
+    if (!socketReady || !socketId) {
+      setCreateRoomUsernameError("Connection not ready. Please wait a moment and try again.");
+      return;
+    }
+
     setOpenCreateRoom(false);
     setModalLoading(true);
 
     const values = {
-      adminId: socketId,
+      adminId: storedClientId,
       username: username,
     };
-    const response = await createRoomMutation({
-      variables: values,
-    });
-    setModalLoading(false);
-    const roomCode = response?.data?.createRoom?.response?.code?.toString();
+    try {
+      const response = await createRoomMutation({
+        variables: values,
+      });
+      setModalLoading(false);
+      const roomCode = response?.data?.createRoom?.response?.code?.toString();
 
-    history.push({
-      pathname: "/gameInfo/" + roomCode,
-      state: { username: username, socketId: socketId },
-    });
+      history.push({
+        pathname: "/gameInfo/" + roomCode,
+        state: { username: username, socketId: storedClientId },
+      });
+    } catch (error) {
+      setModalLoading(false);
+      setOpenCreateRoom(true);
+      setCreateRoomUsernameError("Server unavailable. Please try again.");
+    }
   };
 
   const joinRoom = async () => {
@@ -100,6 +141,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ history }) => {
       setJoinRoomCodeError("Please enter a valid room code (minimum 4 characters)");
       hasError = true;
     }
+
+    if (!socketReady || !socketId) {
+      setJoinRoomCodeError("Connection not ready. Please wait a moment and try again.");
+      hasError = true;
+    }
     
     if (hasError) return;
 
@@ -107,13 +153,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ history }) => {
     setModalLoading(true);
 
     const values = {
-      userId: socketId,
+      userId: storedClientId,
       username: username,
       roomCode: code,
     };
-    const response = await joinRoomMutation({
-      variables: values,
-    });
+    let response;
+    try {
+      response = await joinRoomMutation({
+        variables: values,
+      });
+    } catch (error) {
+      setModalLoading(false);
+      setOpenJoinRoom(true);
+      setJoinRoomCodeError("Server unavailable. Please try again.");
+      return;
+    }
 
     if (!response?.data?.joinRoom?.response?.values) {
       const errorDetected = response?.data?.joinRoom?.response?.error?.toString();
@@ -144,7 +198,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ history }) => {
 
     history.push({
       pathname: "/gameInfo/" + code,
-      state: { username: username, socketId: socketId },
+      state: { username: username, socketId: storedClientId },
     });
   };
 
