@@ -32,7 +32,7 @@ export const GameInfoScreen: React.FC<GameInfoScreenRoomProps> = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [leaveNotice, setLeaveNotice] = useState("");
   const [showLeaveNotice, setShowLeaveNotice] = useState(false);
-  const [currentUserId] = useState(location.state.socketId);
+  const [currentUserId] = useState(location.state?.socketId);
   const hasJoinedRef = useRef(false);
   const playersRef = useRef<Player[]>([]);
   const prevPlayersRef = useRef<Player[] | null>(null);
@@ -46,7 +46,7 @@ export const GameInfoScreen: React.FC<GameInfoScreenRoomProps> = ({
       roomCode: roomId,
     },
     fetchPolicy: "network-only",
-    pollInterval: 2000,
+    pollInterval: 5000,
   });
 
   const {
@@ -59,12 +59,18 @@ export const GameInfoScreen: React.FC<GameInfoScreenRoomProps> = ({
       roomCode: roomId,
     },
     fetchPolicy: "network-only",
-    pollInterval: 2000,
+    pollInterval: 5000,
   });
 
   const isHost = data?.getRoomDetails?.adminSocketId === location.state.socketId;
   const maxPlayers = 2;
   const isLobbyFull = players.length === maxPlayers;
+  useEffect(() => {
+    if (!location.state?.socketId || !location.state?.username) {
+      history.push("/");
+    }
+  }, [history, location.state]);
+
 
   useEffect(() => {
     playersRef.current = players;
@@ -153,6 +159,21 @@ export const GameInfoScreen: React.FC<GameInfoScreenRoomProps> = ({
       setPlayers(newPlayers);
     }
   };
+  useEffect(() => {
+    if (!lobbyLoading && lobbyData && currentUserId) {
+      const isMember = lobbyData.getLobbyDetails.some(
+        (lobbyUser) => lobbyUser.userId === currentUserId
+      );
+
+      if (!isMember) {
+        setErrorMessage("You have left the lobby.");
+        setShowError(true);
+        setTimeout(() => {
+          history.push("/");
+        }, 1500);
+      }
+    }
+  }, [lobbyLoading, lobbyData, currentUserId, history]);
 
   // Initial load
   useEffect(() => {
@@ -313,18 +334,20 @@ export const GameInfoScreen: React.FC<GameInfoScreenRoomProps> = ({
   const handleLeaveLobby = async () => {
     if (isHost) {
       // Host leaves: notify server to delete room + kick everyone
-      socket.emit("leaveRoom", {
-        roomId: roomId,
-        userId: location.state.socketId,
-      });
-
-      try {
-        await destroyRoomAndLobby({ variables: { roomCode: roomId } });
-      } catch (error) {
-        console.error("Error destroying room:", error);
-      } finally {
-        history.push("/");
+      if (socket.connected) {
+        socket.emit("leaveRoom", {
+          roomId: roomId,
+          userId: location.state.socketId,
+        });
+      } else {
+        try {
+          await destroyRoomAndLobby({ variables: { roomCode: roomId } });
+        } catch (error) {
+          console.error("Error destroying room:", error);
+        }
       }
+
+      history.push("/");
     } else {
       // Player leaves: ensure proper cleanup order
       try {
@@ -357,10 +380,12 @@ export const GameInfoScreen: React.FC<GameInfoScreenRoomProps> = ({
   // Go to home page from error modal
   const handleGoHome = async () => {
     if (isHost) {
-      try {
-        await destroyRoomAndLobby({ variables: { roomCode: roomId } });
-      } catch (error) {
-        console.error("Error destroying room:", error);
+      if (!socket.connected) {
+        try {
+          await destroyRoomAndLobby({ variables: { roomCode: roomId } });
+        } catch (error) {
+          console.error("Error destroying room:", error);
+        }
       }
     }
     history.push("/");

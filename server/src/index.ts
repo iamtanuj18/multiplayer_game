@@ -33,7 +33,7 @@ const main = async () => {
   const AppDataSource = new DataSource({
     type: "postgres",
     url: process.env.DATABASE_URL,
-    logging: true,
+    logging: process.env.NODE_ENV === "development",
     synchronize: process.env.NODE_ENV === "development", // Auto-create tables in dev
     entities: [User, Lobby, Room],
     extra: {
