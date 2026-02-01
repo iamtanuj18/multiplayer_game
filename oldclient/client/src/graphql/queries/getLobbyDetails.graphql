@@ -1,5 +1,0 @@
-query GetLobbyDetails($roomCode: String!) {
-  getLobbyDetails(roomCode: $roomCode) {
-    ...RegularLobby
-  }
-}

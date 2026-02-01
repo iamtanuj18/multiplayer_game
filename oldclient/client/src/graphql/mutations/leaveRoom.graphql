@@ -1,3 +1,0 @@
-mutation LeaveRoom($id: String!, $roomCode: String!) {
-  leaveRoom(id: $id, roomCode: $roomCode)
-}

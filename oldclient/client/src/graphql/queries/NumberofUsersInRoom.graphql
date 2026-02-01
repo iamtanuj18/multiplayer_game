@@ -1,3 +1,0 @@
-query NumberOfUsersInRoom($roomCode: String!) {
-  getNumberofUsersInRoom(roomCode: $roomCode)
-}

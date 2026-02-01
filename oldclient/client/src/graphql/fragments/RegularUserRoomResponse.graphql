@@ -1,5 +1,0 @@
-fragment RegularUserRoomResponse on RoomUserResponse {
-  response {
-    ...RegularUserResponse
-  }
-}

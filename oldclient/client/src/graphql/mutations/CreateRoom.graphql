@@ -1,5 +1,0 @@
-mutation CreateRoom($adminId: String!, $username: String!) {
-  createRoom(adminId: $adminId, username: $username) {
-    ...RegularRoomResponse
-  }
-}
