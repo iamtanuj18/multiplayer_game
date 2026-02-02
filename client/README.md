@@ -75,7 +75,6 @@ client/
 │   ├── index.tsx        # React entry point
 │   └── index.css        # Global styles
 ├── .env                 # Environment variables (not committed)
-├── .env.production.example # Production template
 ├── .gitignore           # Git exclusions
 ├── package.json         # Dependencies
 └── tsconfig.json        # TypeScript config

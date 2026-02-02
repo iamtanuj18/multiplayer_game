@@ -462,6 +462,11 @@ export const GameInfoScreen: React.FC<GameInfoScreenRoomProps> = ({
             <p className="lobby-subtitle">
               {isLobbyFull ? 'Ready to start!' : 'Waiting for players to join...'}
             </p>
+            {isHost && !isLobbyFull && (
+              <p className="lobby-wait-note">
+                Please wait up to 30 seconds for the player to appear after they join.
+              </p>
+            )}
           </div>
 
           {/* Room Code Card */}

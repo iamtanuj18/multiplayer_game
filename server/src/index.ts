@@ -186,6 +186,46 @@ const main = async () => {
       socket.broadcast.to(data.roomId).emit("userMove", data);
     });
 
+    socket.on("gameOver", async (data) => {
+      // Broadcast game over to opponent
+      socket.broadcast.to(data.roomId).emit("gameOver", {
+        winner: data.winner,
+        reason: data.reason,
+      });
+
+      // Clean up room and lobby data after a short delay to allow clients to receive the message
+      setTimeout(async () => {
+        try {
+          await Lobby.delete({ roomId: data.roomId });
+          await Room.delete({ id: data.roomId });
+          console.log(`🧹 Cleaned up room ${data.roomId} after game over`);
+        } catch (err) {
+          console.error("❌ Error cleaning up room after game over:", err);
+        }
+      }, 25000); // 25 seconds - gives time for both clients to see the countdown and redirect
+    });
+
+    socket.on("checkStatus", (data) => {
+      // Broadcast check status to opponent
+      socket.broadcast.to(data.roomId).emit("checkStatus", {
+        inCheck: data.inCheck,
+      });
+    });
+
+    socket.on("playerDisconnecting", async (data) => {
+      // Notify opponent that player is disconnecting
+      socket.broadcast.to(data.roomId).emit("opponentDisconnected");
+      
+      // Clean up room and lobby immediately
+      try {
+        await Lobby.delete({ roomId: data.roomId });
+        await Room.delete({ id: data.roomId });
+        console.log(`🧹 Cleaned up room ${data.roomId} after player disconnect`);
+      } catch (err) {
+        console.error("❌ Error cleaning up room after disconnect:", err);
+      }
+    });
+
     //Message Events
     socket.on("sendMessage", (message, roomId, username, callback) => {
       socket.broadcast
@@ -205,6 +245,14 @@ const main = async () => {
       socket.broadcast.to(data.roomId).emit("callAccepted", data.signal);
     });
 
+    socket.on("renegotiate", (data) => {
+      socket.broadcast.to(data.roomId).emit("renegotiate", { signal: data.signal });
+    });
+
+    socket.on("streamEnabled", (data) => {
+      socket.broadcast.to(data.roomId).emit("streamEnabled", { username: data.username });
+    });
+
     //Disconnect Event
     socket.on("disconnect", async () => {
       try {
@@ -217,6 +265,11 @@ const main = async () => {
             return;
           }
 
+          // Notify opponent that this player disconnected (if in game)
+          if (room.inGame) {
+            socket.broadcast.to(socket.roomCode).emit("opponentDisconnected");
+          }
+
           // Host disconnected: destroy room + lobby and notify others
           if (room.adminSocketId === (socket.userId || socket.id)) {
             await Lobby.delete({ roomId: socket.roomCode });
@@ -225,13 +278,21 @@ const main = async () => {
             socket.broadcast.to(socket.roomCode).emit("throw-room-recieved", {
               value: "THROW",
             });
+            console.log(`🧹 Cleaned up room ${socket.roomCode} after host disconnect`);
             return;
           }
 
           // Non-host disconnects: remove from lobby and decrement count
           await Lobby.delete({ roomId: socket.roomCode, userId: socket.userId || socket.id });
           const remainingUsers = await Lobby.count({ where: { roomId: socket.roomCode } });
-          await Room.update({ id: socket.roomCode }, { users: remainingUsers });
+          
+          if (remainingUsers === 0) {
+            // No users left, clean up the room
+            await Room.delete({ id: socket.roomCode });
+            console.log(`🧹 Cleaned up empty room ${socket.roomCode}`);
+          } else {
+            await Room.update({ id: socket.roomCode }, { users: remainingUsers });
+          }
 
           // Only emit opponent-left if game is in progress, not in lobby
           if (room.inGame) {

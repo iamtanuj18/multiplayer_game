@@ -42,6 +42,17 @@
   color: #64748b;
 }
 
+.connection-note {
+  margin: 10px 0 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .game-left {
   display: flex;
   flex-direction: column;

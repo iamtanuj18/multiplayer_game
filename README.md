@@ -26,8 +26,8 @@ Multiplayer Chess provides a complete online chess experience with real-time syn
 ## Tech Stack
 
 ### Frontend
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Create React App
+- **Framework**: React 17 with TypeScript
+- **Build Tool**: Create React App (react-app-rewired)
 - **Real-time Communication**: Socket.io Client
 - **API Layer**: GraphQL with Apollo Client (Code Generation via graphql-codegen)
 - **Video/Audio**: WebRTC
@@ -39,7 +39,6 @@ Multiplayer Chess provides a complete online chess experience with real-time syn
 - **API**: GraphQL (Type-GraphQL)
 - **Database**: PostgreSQL with TypeORM
 - **Real-time Engine**: Socket.io Server
-- **Authentication**: Session-based with user management
 - **ORM**: TypeORM with entity relationships
 
 ### Infrastructure
@@ -90,7 +89,7 @@ multiplayer_game/
 │   │   │   └── IO-socket.ts
 │   │   └── utils/           # Helper utilities
 │   └── README.md            # Backend-specific documentation
-└── GIT-SAFETY-AUDIT.md      # Security audit report
+
 ```
 
 ## Architecture Flow
@@ -161,7 +160,7 @@ See `client/README.md` for detailed instructions.
 cd server
 npm install
 
-# Configure database in ormconfig.json
+# Configure database in server/.env
 npm run dev
 ```
 
@@ -169,21 +168,21 @@ See `server/README.md` for detailed instructions.
 
 ### Database Setup
 1. Create PostgreSQL database
-2. Update `server/ormconfig.json` with your database credentials
+2. Update `server/.env` with your database credentials
 3. TypeORM will auto-create tables on first run
 
 ## Environment Variables
 
 ### Frontend (.env)
 ```
-REACT_APP_GRAPHQL_URL=http://localhost:4000/graphql
-REACT_APP_SOCKET_URL=http://localhost:4000
+REACT_APP_GRAPHQL_URL=http://localhost:5000/graphql
+REACT_APP_SOCKET_URL=http://localhost:5000
 ```
 
 ### Backend (.env)
 ```
 DATABASE_URL=postgresql://username:password@localhost:5432/chess_db
-PORT=4000
+PORT=5000
 NODE_ENV=development
 ALLOWED_ORIGINS=http://localhost:3000
 ```

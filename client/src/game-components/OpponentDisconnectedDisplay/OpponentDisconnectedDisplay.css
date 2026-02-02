@@ -1,0 +1,71 @@
+.opponent-disconnected-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(8px);
+}
+
+.opponent-disconnected-content {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  padding: 40px 60px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: slideIn 0.5s ease-out;
+  max-width: 500px;
+}
+
+.opponent-disconnected-icon {
+  font-size: 4em;
+  margin-bottom: 20px;
+}
+
+.opponent-disconnected-title {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 15px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.opponent-disconnected-message {
+  font-size: 1.2em;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+.opponent-disconnected-countdown {
+  font-size: 1.1em;
+  color: #ffe66d;
+  margin-top: 20px;
+  font-weight: 600;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}

@@ -43,6 +43,23 @@
   margin-bottom: 30px;
 }
 
+.game-over-countdown {
+  font-size: 1.1em;
+  color: #ffd700;
+  margin-top: 20px;
+  font-weight: 600;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 .game-over-button {
   background: rgba(255, 255, 255, 0.2);
   border: 2px solid white;

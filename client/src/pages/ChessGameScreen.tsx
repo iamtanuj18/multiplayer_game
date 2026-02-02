@@ -24,18 +24,55 @@ export const ChessGameScreen: React.FC<ChessGameScreenProps> = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-  const parsedUsers = Array.isArray(location.state.users)
+  // Check if we have valid state - if not (refresh/direct URL), redirect home
+  useEffect(() => {
+    if (!location.state || !location.state.username || !location.state.playerVal) {
+      console.log("No valid state found - redirecting to home");
+      history.push("/");
+      return;
+    }
+  }, [location.state, history]);
+
+  const parsedUsers = Array.isArray(location.state?.users)
     ? location.state.users
-    : JSON.parse(location.state.users);
+    : location.state?.users ? JSON.parse(location.state.users) : [];
 
   const opponentUser = parsedUsers.find(
-    (user: { username: string }) => user.username !== location.state.username
+    (user: { username: string }) => user.username !== location.state?.username
   );
 
-  const playerColor = location.state.playerVal === "1" ? "White" : "Black";
+  const playerColor = location.state?.playerVal === "1" ? "White" : "Black";
   const opponentColor = playerColor === "White" ? "Black" : "White";
 
   const [destroyRoomAndLobby] = useDestroyRoomAndLobbyMutation();
+  
+  useEffect(() => {
+    // Handle browser refresh/close
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Mark in sessionStorage that user is leaving
+      sessionStorage.setItem('leftGame', 'true');
+      
+      // Notify opponent
+      socket.emit("playerDisconnecting", { roomId });
+      socket.emit("leaveRoom", { roomId, userId: socket.id });
+    };
+
+    // Check if this is a page reload after leaving
+    const leftGame = sessionStorage.getItem('leftGame');
+    if (leftGame === 'true') {
+      sessionStorage.removeItem('leftGame');
+      // User refreshed or returned after leaving - redirect home
+      history.push("/");
+      return;
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [roomId, history]);
+
   useEffect(() => {
     socket.on("opponent-left", () => {
       setErrorMessage("Your opponent has left the game. Please return to the main screen.");
@@ -49,12 +86,29 @@ export const ChessGameScreen: React.FC<ChessGameScreenProps> = ({
 
   const sendToHomePage = () => {
     setShowModal(false);
+    
+    // Mark that we're leaving intentionally
+    sessionStorage.setItem('leftGame', 'true');
+    
+    // Notify opponent before leaving
+    socket.emit("playerDisconnecting", { roomId });
+    
     const values = {
       roomCode: roomId,
     };
     destroyRoomAndLobby({ variables: values });
+    
+    // Disconnect socket
+    socket.emit("leaveRoom", { roomId, userId: socket.id });
+    socket.disconnect();
+    
     history.push("/");
   };
+
+  // Don't render if no valid state
+  if (!location.state || !location.state.username || !location.state.playerVal) {
+    return null;
+  }
 
   return (
     <>
@@ -84,6 +138,9 @@ export const ChessGameScreen: React.FC<ChessGameScreenProps> = ({
                 <h3>Players</h3>
                 <p>Camera views</p>
               </div>
+              <p className="connection-note">
+                After enabling camera & mic, please wait up to 30 seconds for the connection.
+              </p>
               <VideoCall
                 roomId={roomId}
                 allUsers={parsedUsers}

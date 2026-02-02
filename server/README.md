@@ -42,7 +42,6 @@ server/
 ├── .env                       # Environment variables (not committed)
 ├── .env.production.example    # Production template
 ├── .gitignore                 # Git exclusions
-├── ormconfig.json             # TypeORM config
 ├── package.json               # Dependencies
 ├── tsconfig.json              # TypeScript config
 └── yarn.lock                  # Dependency lock
@@ -151,12 +150,6 @@ npm run start2
 Output in `dist/` directory.
 
 ## Configuration Files
-
-### ormconfig.json
-TypeORM database configuration:
-- Auto-sync in development
-- Migrations for production
-- Entity auto-loading
 
 ### tsconfig.json
 TypeScript compiler settings:

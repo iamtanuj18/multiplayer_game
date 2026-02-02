@@ -3,6 +3,7 @@
     place-content: center;
     font-size: 1.8em;
     user-select: none;
+    position: relative;
 }
 
 .piece.valid {
@@ -11,6 +12,11 @@
 
 .piece.valid.on-selection {
     color: #b91d1d;
+}
+
+.piece.capture {
+    background-color: rgba(220, 38, 38, 0.35) !important;
+    box-shadow: inset 0 0 20px rgba(220, 38, 38, 0.4), 0 0 10px rgba(220, 38, 38, 0.3);
 }
 
 .valid > .circle {

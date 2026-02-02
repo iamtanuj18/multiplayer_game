@@ -19,7 +19,7 @@
   width: 100%;
   max-width: 42rem;
   margin: -10vh auto 0;
-  padding: 0 1.5rem;
+  padding: 40px 1.5rem 0;
 }
 
 /* Header */
@@ -57,6 +57,17 @@
   color: #475569;
   font-size: 16px;
   margin: 0;
+}
+
+.lobby-wait-note {
+  margin: 10px auto 0;
+  max-width: 460px;
+  padding: 8px 12px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
 }
 
 /* Room Code Card */

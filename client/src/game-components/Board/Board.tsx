@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import "./Board.css";
 import "./PieceNotification.css";
 import "./PlayerLabels.css";
 import Tile from "../Tile";
-import { FilesLetters, INITIAL_POSITIONS } from "../../constants";
+import { FilesLetters, INITIAL_POSITIONS, PIECE_TYPES } from "../../constants";
 import { TileInformation } from "../../models";
 import { getValidMoves, isCheckmate, isStalemate } from "../../utils";
 import { useWindowSize } from "../../hooks/useWindowSize";
@@ -39,6 +39,7 @@ const Board = (props: BoardProps) => {
     useState<TileInformation[]>(INITIAL_POSITIONS);
   const [lastMovePosition, setLastMovePosition] = useState("");
   const [showNotification, setShowNotification] = useState(false);
+  const prevCheckRef = useRef<boolean | null>(null);
   const { setCheck, isBlackTurn } = props;
   let isBlackTile = true;
   const tiles = [];
@@ -83,12 +84,44 @@ const Board = (props: BoardProps) => {
         }
       }
 
+      // Check if the destination is a valid move
+      const isValidMove = validMoves?.some((tile: string) => tile === position);
+      if (!isValidMove) {
+        // Invalid move - just deselect the piece
+        setPieceElementSelected(null);
+        setPieceSelectedPosition("");
+        const newPiecesPosition = picesPositions.map((p) => {
+          p.pieceController.selected = false;
+          return p;
+        });
+        setPiecesPositions(newPiecesPosition);
+        return;
+      }
+
       // Otherwise, attempt to move
       const pieceSelected = picesPositions.find(
         (piece) => piece.position === pieceSelectedPosition
       );
       if (pieceSelected) {
         pieceSelected.pieceController.selected = false;
+        
+        // Check if capturing a king
+        const capturedPiece = picesPositions.find(p => p.position === position);
+        if (capturedPiece && capturedPiece.pieceController.pieceType === PIECE_TYPES.KING) {
+          // Game over - king captured
+          const winner = props.isBlackTurn ? props.username : props.otherUsername;
+          
+          // Notify opponent about game over
+          socket.emit("gameOver", {
+            roomId: roomId,
+            winner: winner,
+            reason: "checkmate",
+          });
+          
+          props.onGameOver(winner, "checkmate");
+          return;
+        }
+        
         const newPiecesPosition = picesPositions.filter(
           (piece) =>
             piece.position !== pieceSelectedPosition &&
@@ -149,6 +182,23 @@ const Board = (props: BoardProps) => {
 
   useEffect(() => {
     socket.on("userMove", (data) => {
+      // Check if opponent captured our king
+      const capturedPiece = picesPositions.find(p => p.position === data.newPos);
+      if (capturedPiece && capturedPiece.pieceController.pieceType === PIECE_TYPES.KING) {
+        // Game over - our king was captured
+        const winner = props.otherUsername;
+        
+        // Notify opponent (though they already know, this ensures sync)
+        socket.emit("gameOver", {
+          roomId: roomId,
+          winner: winner,
+          reason: "checkmate",
+        });
+        
+        props.onGameOver(winner, "checkmate");
+        return;
+      }
+      
       const newPiecesPosition = picesPositions.filter(
         (piece) =>
           piece.position !== data.oldPos && piece.position !== data.newPos
@@ -181,23 +231,65 @@ const Board = (props: BoardProps) => {
   });
 
   useEffect(() => {
+    // Listen for game over events from opponent
+    socket.on("gameOver", (data: { winner: string | null; reason: "checkmate" | "stalemate" }) => {
+      props.onGameOver(data.winner, data.reason);
+    });
+
+    // Listen for check status from opponent
+    socket.on("checkStatus", (data: { inCheck: boolean }) => {
+      setCheck(data.inCheck);
+    });
+
+    return () => {
+      socket.off("gameOver");
+      socket.off("checkStatus");
+    };
+  }, []);
+
+  useEffect(() => {
     const inCheck = isCheck(picesPositions, isBlackTurn, lastMovePosition);
-    setCheck(inCheck);
+
+    if (prevCheckRef.current !== inCheck) {
+      prevCheckRef.current = inCheck;
+      setCheck(inCheck);
+
+      // Notify opponent about check status only when it changes
+      socket.emit("checkStatus", {
+        roomId: roomId,
+        inCheck: inCheck,
+      });
+    }
 
     // Check for checkmate
     if (inCheck && isCheckmate(picesPositions, isBlackTurn, lastMovePosition)) {
       // The current player (whose turn it is) is in checkmate, so they lose
       const winner = isBlackTurn ? props.otherUsername : props.username;
+      
+      // Notify opponent
+      socket.emit("gameOver", {
+        roomId: roomId,
+        winner: winner,
+        reason: "checkmate",
+      });
+      
       props.onGameOver(winner, "checkmate");
       return;
     }
 
     // Check for stalemate
     if (!inCheck && isStalemate(picesPositions, isBlackTurn, lastMovePosition)) {
+      // Notify opponent
+      socket.emit("gameOver", {
+        roomId: roomId,
+        winner: null,
+        reason: "stalemate",
+      });
+      
       props.onGameOver(null, "stalemate");
       return;
     }
-  });
+  }, [picesPositions, isBlackTurn, lastMovePosition, roomId]);
 
   const validMoves = getValidMoves(
     picesPositions,
@@ -215,6 +307,9 @@ const Board = (props: BoardProps) => {
       const currentTile = picesPositions.find((tile) => tile.position === currentPos);
       const selected = currentTile?.pieceController.selected;
       const piece = currentTile?.piece;
+      const isValidMove = validMoves?.some((tile: string) => tile === currentPos) || false;
+      // Only show capture indicator on opponent pieces that can be captured (not on the selected piece itself)
+      const isCapture = pieceElementSelected !== null && isValidMove && piece !== undefined && !selected;
 
       tiles.push(
         <Tile
@@ -222,7 +317,8 @@ const Board = (props: BoardProps) => {
           isBlackTile={isBlackTile}
           position={String(currentPos)}
           isSelected={selected || false}
-          isValid={validMoves?.some((tile: string) => tile === currentPos) || false}
+          isValid={isValidMove}
+          isCapture={isCapture}
           pieceSelected={pieceElementSelected !== null}
           handleClick={handleClick}
         >

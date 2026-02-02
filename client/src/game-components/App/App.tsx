@@ -3,8 +3,10 @@ import Board from "../Board";
 import TurnDisplay from "../TurnDisplay";
 import CheckDisplay from "../CheckDisplay";
 import GameOverDisplay from "../GameOverDisplay";
-import { useState } from "react";
+import OpponentDisconnectedDisplay from "../OpponentDisconnectedDisplay";
+import { useState, useEffect } from "react";
 import { Spinner } from "react-bootstrap";
+import { socket } from "../../services/socket";
 
 interface userType {
   id: string;
@@ -27,11 +29,23 @@ const App = (props: AppProps) => {
   const [isGameOver, setIsGameOver] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [gameOverReason, setGameOverReason] = useState<"checkmate" | "stalemate" | null>(null);
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
   const otherUser = props.users.find(
     (user: userType) => user.username !== props.username
   );
   const otherUsername = otherUser?.username || 'Opponent';
+
+  useEffect(() => {
+    // Listen for opponent disconnect during game
+    socket.on("opponentDisconnected", () => {
+      setOpponentDisconnected(true);
+    });
+
+    return () => {
+      socket.off("opponentDisconnected");
+    };
+  }, []);
 
   setTimeout(() => {
     setLoading(true);
@@ -56,10 +70,15 @@ const App = (props: AppProps) => {
       {load ? (
         <div className="App">
           <CheckDisplay isCheck={isCheck}></CheckDisplay>
+          <OpponentDisconnectedDisplay
+            show={opponentDisconnected}
+            roomId={props.roomId}
+          ></OpponentDisconnectedDisplay>
           <GameOverDisplay
             isGameOver={isGameOver}
             winner={winner}
             reason={gameOverReason}
+            roomId={props.roomId}
           ></GameOverDisplay>
           <div className="board-container">
             <Board
