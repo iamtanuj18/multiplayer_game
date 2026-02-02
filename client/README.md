@@ -2,6 +2,11 @@
 
 Modern React 17 application with TypeScript for real-time multiplayer chess.
 
+## Live Preview
+
+Deployed frontend (CloudFront): https://d2t52e0eyp62q6.cloudfront.net
+
+
 ## Overview
 
 The Chess Game Client is a single-page application (SPA) that provides an interface for playing chess online with real-time move synchronization, live chat messaging, and peer-to-peer video calling.

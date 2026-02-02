@@ -4,7 +4,7 @@ A real-time multiplayer chess platform with integrated video chat and messaging.
 
 ---
 
-## 🚀 **[Try the Live Demo Here]()** 🚀
+## 🚀 **[Try the Live Demo Here](https://d2t52e0eyp62q6.cloudfront.net)** 🚀
 
 ---
 
@@ -45,6 +45,22 @@ Multiplayer Chess provides a complete online chess experience with real-time syn
 - **Database**: PostgreSQL
 - **WebSocket Server**: Socket.io for real-time events
 - **GraphQL Server**: Apollo Server Express
+
+## Deployment (Current)
+
+Frontend:
+- S3 static hosting
+- CloudFront HTTPS in front of S3
+
+Backend:
+- Elastic Beanstalk single-instance (t3.micro)
+- Existing RDS database
+- CloudFront HTTPS in front of the EB HTTP endpoint
+
+Reasoning:
+- EB is used to show managed deployment knowledge (health checks, env vars, quick updates)
+- Single-instance keeps costs minimal
+- CloudFront provides HTTPS without a custom domain
 
 ## Project Structure
 

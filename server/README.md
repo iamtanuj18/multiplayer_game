@@ -212,6 +212,14 @@ socket.on('opponent-left', () => { /* Handle disconnect */ });
 
 ## Deployment
 
+## Current Deployment
+
+- Elastic Beanstalk single-instance (t3.micro) for minimal cost
+- Environment variables are set in EB (not from local .env)
+- Existing RDS database used via DATABASE_URL
+- CloudFront HTTPS in front of the EB HTTP endpoint
+
+
 ### Option 1: AWS Elastic Beanstalk (Recommended)
 ```bash
 # Install EB CLI
